@@ -1,0 +1,63 @@
+/* 
+This script accepts and maps serial inputs of the form
+"XXX,YYY" to angles of rotation of the pan and tilt
+servo motors corresponding to analog pins A0 and A5,
+respectively. Values of "XXX" must be between 0 and
+180. Values of "YYY" must be between 55 and 180.
+*/
+
+ #include <Servo.h>
+ Servo pan, tilt;
+ String readStringPan;
+ String readStringTilt;
+
+ void setup() {
+   // Assign variables
+   pan.attach(A0);  
+   tilt.attach(A5);
+   pan.write(90);
+   tilt.write(90);
+   // Open the serial port
+   Serial.begin(9600); 
+ }
+
+ void loop() {
+   while (Serial.available()) {  // Listen for data in the serial receive buffer
+     // Store the incoming serial data as two seperate strings of characters 
+     // seperated by a comma (',') the serial data.
+     char c = Serial.read();  
+     readStringPan += c; 
+     delay(5);
+     if (c == ',') {
+       Serial.print("c = ',' "); 
+       while (Serial.available()) {
+         char d = Serial.read();
+         readStringTilt += d;
+         Serial.print("Tilt Input: ");
+         Serial.println(readStringTilt);
+         delay(5); }
+     }
+   }
+   
+   // If a value was inputted for the pan angle, write that value as an integer
+   // into the analog pin corresponding to then pan servo motor.
+   if (readStringPan.length() > 0) { 
+     Serial.print("Pan Input: ");
+     Serial.println(readStringPan);
+     int n = readStringPan.toInt();
+     pan.write(n);
+   }
+   // If a value was inputted for the tilt angle, write that value as an integer
+   // into the analog pin corresponding to then tilt servo motor.
+   if (readStringTilt.length() > 0) {
+     Serial.print("Tilt Input: ");
+     Serial.println(readStringTilt);
+     int m = readStringTilt.toInt();
+     if (m >= 55) {  // Do not write the tilt value if it is less than or equal to
+                     // 55, as this exceeds the free range of motion of the system.
+      tilt.write(m); }
+   }
+  
+   readStringPan = "";
+   readStringTilt = "";
+ }
