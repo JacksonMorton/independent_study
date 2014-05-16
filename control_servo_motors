@@ -93,7 +93,7 @@ void loop()
            pan.write(pan_val);
           // break;
          }
-         //A speaker command is specified with an T
+         //A speaker command is specified with an T 
          else if (c == 'T') {
            tilt_val = client.parseInt();
            Serial.print("\nThe pan angle is ");
