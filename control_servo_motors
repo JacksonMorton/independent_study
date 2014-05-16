@@ -1,0 +1,165 @@
+/*
+Servomotor Control
+
+This code is modified from control_led_speaker.ino by Jeremy Blum
+and the Wifi Web Server sketch listed as an example sketch on the 
+Arduino Wifi Shield library page.
+
+It maps values submitted from the HTML page at the built-in ISP of 
+the WiFi Shiled to angles of rotation of the pan and tilt
+servo motors corresponding to analog pins A0 and A5. User-selected
+values of the pan angle must be between 0 and 180. User-selected
+values of the pan angle must be between 55 and 180.
+*/
+
+#include <SPI.h>
+#include <WiFi.h>
+#include <Servo.h>
+Servo pan, tilt;
+String readStringPan;
+String readStringTilt;
+
+char ssid[] = "The Wi is Too Damn Fi";      // The network SSID (name) 
+char pass[] = "newyork27";   // The network password
+int status = WL_IDLE_STATUS;
+
+int pan_val;
+int tilt_val;
+
+//Start the server on port 80
+WiFiServer server(80);
+
+boolean receiving = false; //To keep track of whether we are getting data.
+
+void setup() {
+  Serial.begin(9600);
+
+  pan.attach(A0);
+  tilt.attach(A5);
+  // Serial.begin(9600); // Open the serial port.
+  pan.write(90);
+  tilt.write(90);
+
+  //Connect with DHCP
+  if (WiFi.status() == WL_NO_SHIELD) {
+    Serial.println("WiFi shield not present"); 
+    // don't continue:
+    while(true);
+  }
+  
+  // attempt to connect to Wifi network:
+  while ( status != WL_CONNECTED) { 
+    Serial.print("Attempting to connect to SSID: ");
+    Serial.println(ssid);
+    // Connect to WPA/WPA2 network. Change this line if using open or WEP network:    
+    status = WiFi.begin(ssid, pass);
+    // wait 10 seconds for connection:
+    delay(10000);
+  }
+  
+  server.begin();
+  // you're connected now, so print out the status:
+  printWifiStatus(); 
+ } 
+  
+
+void loop()
+{
+  WiFiClient client = server.available();
+
+  if (client) {
+   Serial.println("new client");
+   //An HTTP request ends with a blank line
+   boolean currentLineIsBlank = true;
+   boolean sentHeader = false;
+
+   while (client.connected()) {
+     if (client.available()) {
+       char c = client.read(); //Read from the incoming buffer
+       Serial.write(c);
+       
+       if(receiving && c == ' ') receiving = false; //done receiving
+       if(c == '?') receiving = true; //found arguments
+
+       //This looks at the GET requests
+       if(receiving)
+       {
+         //An LED command is specified with an P
+         if (c == 'P') {
+           pan_val = client.parseInt();
+           Serial.print("\nThe pan angle is ");
+           Serial.print(pan_val);
+           Serial.print(" degrees.\n");
+           pan.write(pan_val);
+          // break;
+         }
+         //A speaker command is specified with an T
+         else if (c == 'T') {
+           tilt_val = client.parseInt();
+           Serial.print("\nThe pan angle is ");
+           Serial.print(tilt_val);
+           Serial.print(" degrees.\n");
+           tilt.write(tilt_val);
+           break;
+          // client.println("Connection: close");  // the connection will be closed after completion of the response
+           //client.println("Refresh: 5");  // refresh the page automatically every 5 sec
+           //client.println();
+           sentHeader = false;
+         }
+       }
+    
+       //Print out the response header and the HTML page
+       if(!sentHeader) {
+          //Send a standard HTTP response header
+          client.println("HTTP/1.1 200 OK");
+          client.println("Content-Type: text/html\n");
+          
+          // Inputs to control Pan and Tilt
+          client.println("<form action='' method='get'>");  
+          client.println("<label for='Pan'>Pan:</label>");  
+          client.println("<input id='Pan' type='text' name='P' value='' /><br>"); // Pan
+          client.println("<label for='Tilt'>Tilt:</label>");            
+          client.println("<input id='Tilt' type='text' name='T' value='' /><br>"); // Tilt
+          client.println("<input type='submit' value='Submit Pan & Tilt Angles' />");
+          client.println("</form>");      
+          client.println("<meta http-equiv='refresh' content='5'>");
+          
+          sentHeader = true;
+        }
+ 
+        if (c == '\n' && currentLineIsBlank) {
+          Serial.println("asedf");
+        break; }
+        if (c == '\n') {        
+          // you're starting a new line
+          currentLineIsBlank = true;
+        }
+        else if (c != '\r') {   
+          // you've gotten a character on the current line
+          currentLineIsBlank = false;
+        }
+      }
+    }
+    Serial.println("55");
+    delay(5); //Give the web browser time to receive the data
+    client.stop(); //Close the connection:
+    Serial.println("client disonnected");
+  }
+}
+
+void printWifiStatus() {
+  // print the SSID of the network you're attached to:
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+
+  // print your WiFi shield's IP address:
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  Serial.println(ip);
+
+  // print the received signal strength:
+  long rssi = WiFi.RSSI();
+  Serial.print("signal strength (RSSI):");
+  Serial.print(rssi);
+  Serial.println(" dBm");
+}
